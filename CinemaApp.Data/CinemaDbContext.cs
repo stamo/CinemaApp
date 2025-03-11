@@ -11,5 +11,15 @@ namespace CinemaApp.Data
             : base(options)
         {
         }
+
+        public DbSet<ApplicationUserMovie> ApplicationUserMovies { get; set; }
+
+        public DbSet<Cinema> Cinemas { get; set; }
+
+        public DbSet<CinemaMovie> CinemaMovies { get; set; }
+
+        public DbSet<Movie> Movies { get; set; }
+
+        public DbSet<Ticket> Tickets { get; set; }
     }
 }
