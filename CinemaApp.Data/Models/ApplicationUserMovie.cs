@@ -14,5 +14,8 @@ namespace CinemaApp.Data.Models
         public Guid MovieId { get; set; }
 
         public Movie Movie { get; set; } = null!;
+
+        [Comment("Shows if movie from user watchlist is deleted")]
+        public bool IsDeleted { get; set; }
     }
 }
