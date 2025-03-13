@@ -1,4 +1,6 @@
-﻿using CinemaApp.Data.Models;
+﻿using System.Reflection;
+
+using CinemaApp.Data.Models;
 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -29,5 +31,11 @@ namespace CinemaApp.Data
         public DbSet<Movie> Movies { get; set; } = null!;
 
         public DbSet<Ticket> Tickets { get; set; } = null!;
+
+        protected override void OnModelCreating(ModelBuilder builder)
+        {
+            base.OnModelCreating(builder);
+            builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+        }
     }
 }
