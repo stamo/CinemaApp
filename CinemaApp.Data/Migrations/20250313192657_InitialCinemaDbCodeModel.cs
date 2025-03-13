@@ -102,7 +102,7 @@ namespace CinemaApp.Data.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "Ticket identifier"),
-                    Price = table.Column<decimal>(type: "money(18,2)", nullable: false, comment: "Ticket price"),
+                    Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false, comment: "Ticket price"),
                     CinemaMovieId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "Foreign key to the CinemaMovie projection entity"),
                     ApplicationUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "Foreign key to the user bought the ticket")
                 },
