@@ -23,4 +23,16 @@
     <ProjectReference Include="..\CinemaApp.Common\CinemaApp.Common.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Files\cinemasMovies.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Files\movies.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Files\tickets.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
