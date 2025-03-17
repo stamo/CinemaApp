@@ -1,6 +1,7 @@
 using CinemaApp.Data;
 using CinemaApp.Data.Models;
 using CinemaApp.Data.Utilities;
+using CinemaApp.Data.Utilities.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,6 +11,9 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("CinemaDbConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.AddDbContext<CinemaDbContext>(options =>
     options.UseSqlServer(connectionString));
+
+builder.Services.AddScoped<IValidator, EntityValidator>();
+
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services
@@ -51,8 +55,14 @@ app.MapRazorPages();
 
 using (var scope = app.Services.CreateScope())
 {
-    var services = scope.ServiceProvider;
-    var dbContext = services.GetRequiredService<CinemaDbContext>();
+    IServiceProvider services = scope.ServiceProvider;
+
+    CinemaDbContext dbContext = services.GetRequiredService<CinemaDbContext>();
+    IValidator entityValidator = services.GetRequiredService<IValidator>();
+    ILogger<DataProcessor> logger = services.GetRequiredService<ILogger<DataProcessor>>();
+    
+    DataProcessor dataProcessor = new DataProcessor(entityValidator, logger);
+    await dataProcessor.ImportCinemasMoviesFromJson(dbContext);
 
     //await DataProcessor.ImportMoviesFromJson(dbContext);
     //await DataProcessor.ImportCinemasMoviesFromJson(dbContext);
