@@ -15,6 +15,7 @@ builder.Services.AddDbContext<CinemaDbContext>(options =>
 
 builder.Services.AddScoped<IValidator, EntityValidator>();
 builder.Services.AddSingleton<IXmlHelper, XmlHelper>();
+builder.Services.AddScoped<IDbSeeder, DataProcessor>();
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -61,22 +62,13 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 app.MapRazorPages();
 
-using (var scope = app.Services.CreateScope())
+if (app.Environment.IsDevelopment())
 {
+    using IServiceScope scope = app.Services.CreateScope();
     IServiceProvider services = scope.ServiceProvider;
 
-    CinemaDbContext dbContext = services.GetRequiredService<CinemaDbContext>();
-    IValidator entityValidator = services.GetRequiredService<IValidator>();
-    IXmlHelper xmlHelper = services.GetRequiredService<IXmlHelper>();
-    ILogger<DataProcessor> logger = services.GetRequiredService<ILogger<DataProcessor>>();
-    
-    DataProcessor dataProcessor = new DataProcessor(entityValidator, xmlHelper, logger);
-    dataProcessor.SeedRoles(services);
-    dataProcessor.SeedUsers(services);
-
-    //await DataProcessor.ImportMoviesFromJson(dbContext);
-    //await DataProcessor.ImportCinemasMoviesFromJson(dbContext);
-    await dataProcessor.ImportTicketsFromXml(dbContext);
+    IDbSeeder dataProcessor = services.GetRequiredService<IDbSeeder>();
+    await dataProcessor.SeedData();
 }
 
 app.Run();

@@ -7,7 +7,6 @@ using static CinemaApp.Common.OutputMessages.ErrorMessages;
 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using JsonSerializer = System.Text.Json.JsonSerializer;
@@ -16,21 +15,43 @@ namespace CinemaApp.Data.Utilities
 {
     // TODO: Refactor this class into separate seeders to improve single responsibility
     // This class is a fatty, we should avoid such classes
-    public class DataProcessor
+    public class DataProcessor : IDbSeeder
     {
+        private readonly CinemaDbContext dbContext;
+
+        private readonly UserManager<ApplicationUser> userManager;
+        private readonly RoleManager<IdentityRole<Guid>> roleManager;
+
         private readonly IValidator entityValidator;
         private readonly IXmlHelper xmlHelper;
         private readonly ILogger<DataProcessor> logger;
 
-        public DataProcessor(IValidator entityValidator, IXmlHelper xmlHelper, 
-            ILogger<DataProcessor> logger)
+        public DataProcessor(CinemaDbContext dbContext, UserManager<ApplicationUser> userManager,
+            RoleManager<IdentityRole<Guid>> roleManager, IValidator entityValidator,
+            IXmlHelper xmlHelper, ILogger<DataProcessor> logger)
         {
+            this.dbContext = dbContext;
+
+            this.userManager = userManager;
+            this.roleManager = roleManager;
+
             this.entityValidator = entityValidator;
             this.xmlHelper = xmlHelper;
             this.logger = logger;
         }
 
-        public async Task ImportMoviesFromJson(CinemaDbContext context)
+        public async Task SeedData()
+        {
+            this.SeedRoles();
+            this.SeedUsers();
+
+            // TODO: Implement mechanism for detecting seeded data!
+            //await this.ImportMoviesFromJson();
+            //await this.ImportCinemasMoviesFromJson();
+            //await this.ImportTicketsFromXml();
+        }
+
+        private async Task ImportMoviesFromJson()
         {
             string path = Path.Combine(AppContext.BaseDirectory, "Files", "movies.json");
             string moviesStr = await File.ReadAllTextAsync(path);
@@ -39,15 +60,15 @@ namespace CinemaApp.Data.Utilities
             if (movies != null && movies.Count > 0)
             {
                 List<Guid> moviesIds = movies.Select(m => m.Id).ToList();
-                if (await context.Movies.AnyAsync(m => moviesIds.Contains(m.Id)) == false)
+                if (await this.dbContext.Movies.AnyAsync(m => moviesIds.Contains(m.Id)) == false)
                 {
-                    await context.Movies.AddRangeAsync(movies);
-                    await context.SaveChangesAsync();
+                    await this.dbContext.Movies.AddRangeAsync(movies);
+                    await this.dbContext.SaveChangesAsync();
                 }
             }
         }
 
-        public async Task ImportCinemasMoviesFromJson(CinemaDbContext context)
+        private async Task ImportCinemasMoviesFromJson()
         {
             string path = Path.Combine(AppContext.BaseDirectory, "Files", "cinemasMovies.json");
             string cinemasMoviesStr = await File.ReadAllTextAsync(path);
@@ -79,7 +100,7 @@ namespace CinemaApp.Data.Utilities
                             cinemaInfo[1] : null;
 
                         // Build the query for extracting Cinema using Query Tree
-                        IQueryable<Cinema> cinemaQuery = context
+                        IQueryable<Cinema> cinemaQuery = this.dbContext
                             .Cinemas
                             .Where(c => c.Name == cinemaName);
                         if (cinemaLocation != null)
@@ -90,7 +111,7 @@ namespace CinemaApp.Data.Utilities
 
                         Cinema? cinema = await cinemaQuery
                             .SingleOrDefaultAsync();
-                        Movie? movie = await context
+                        Movie? movie = await this.dbContext
                             .Movies
                             .FirstOrDefaultAsync(m => m.Title == cinemaMovieDto.Movie);
                         if (cinema == null || movie == null)
@@ -106,7 +127,7 @@ namespace CinemaApp.Data.Utilities
                             continue;
                         }
 
-                        CinemaMovie? existingProjection = await context
+                        CinemaMovie? existingProjection = await this.dbContext
                             .CinemaMovies
                             .FirstOrDefaultAsync(cm => cm.CinemaId == cinema.Id &&
                                                        cm.MovieId == movie.Id);
@@ -131,8 +152,8 @@ namespace CinemaApp.Data.Utilities
                         validCinemaMovies.Add(newCinemaMovie);
                     }
 
-                    await context.CinemaMovies.AddRangeAsync(validCinemaMovies);
-                    await context.SaveChangesAsync();
+                    await this.dbContext.CinemaMovies.AddRangeAsync(validCinemaMovies);
+                    await this.dbContext.SaveChangesAsync();
                 }
             }
             catch (Exception e)
@@ -142,7 +163,7 @@ namespace CinemaApp.Data.Utilities
             }
         }
 
-        public async Task ImportTicketsFromXml(CinemaDbContext context)
+        private async Task ImportTicketsFromXml()
         {
             string path = Path.Combine(AppContext.BaseDirectory, "Files", "tickets.xml");
             string ticketsStr = await File.ReadAllTextAsync(path);
@@ -183,11 +204,11 @@ namespace CinemaApp.Data.Utilities
                             continue;
                         }
 
-                        CinemaMovie? ticketCinemaMovie = await context
+                        CinemaMovie? ticketCinemaMovie = await this.dbContext
                             .CinemaMovies
                             .SingleOrDefaultAsync(cm => cm.CinemaId == ticketCinemaId &&
                                                         cm.MovieId == ticketMovieId);
-                        ApplicationUser? ticketUser = await context
+                        ApplicationUser? ticketUser = await this.dbContext
                             .Users
                             .SingleOrDefaultAsync(u => u.Id == ticketUserId);
                         if (ticketUser == null || ticketCinemaMovie == null)
@@ -212,8 +233,8 @@ namespace CinemaApp.Data.Utilities
                         validTickets.Add(newTicket);
                     }
 
-                    await context.Tickets.AddRangeAsync(validTickets);
-                    await context.SaveChangesAsync();
+                    await this.dbContext.Tickets.AddRangeAsync(validTickets);
+                    await this.dbContext.SaveChangesAsync();
                 }
             }
             catch (Exception e)
@@ -223,32 +244,26 @@ namespace CinemaApp.Data.Utilities
             }
         }
 
-        public void SeedUsers(IServiceProvider serviceProvider)
+        private void SeedUsers()
         {
-            UserManager<ApplicationUser> userManager = serviceProvider
-                .GetRequiredService<UserManager<ApplicationUser>>();
-
-            this.SeedUser(userManager, "admin@example.com", "Admin@123", "Admin");
-            this.SeedUser(userManager, "appManager@example.com", "123asd", "Manager");
-            this.SeedUser(userManager, "appUser@example.com", "123asd", "User");
+            this.SeedUser(this.userManager, "admin@example.com", "Admin@123", "Admin");
+            this.SeedUser(this.userManager, "appManager@example.com", "123asd", "Manager");
+            this.SeedUser(this.userManager, "appUser@example.com", "123asd", "User");
         }
 
-        public void SeedRoles(IServiceProvider serviceProvider)
+        private void SeedRoles()
         {
-            RoleManager<IdentityRole<Guid>> roleManager = serviceProvider
-                .GetRequiredService<RoleManager<IdentityRole<Guid>>>();
-
             string[] roles = { "Admin", "Manager", "User" };
 
             foreach (string role in roles)
             {
-                bool roleExists = roleManager
+                bool roleExists = this.roleManager
                     .RoleExistsAsync(role)
                     .GetAwaiter()
                     .GetResult();
                 if (!roleExists)
                 {
-                    IdentityResult result = roleManager
+                    IdentityResult result = this.roleManager
                         .CreateAsync(new IdentityRole<Guid>(role))
                         .GetAwaiter()
                         .GetResult();
