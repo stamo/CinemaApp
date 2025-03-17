@@ -20,6 +20,12 @@ builder.Services
     .AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
     {
         options.SignIn.RequireConfirmedAccount = false;
+
+        options.Password.RequireDigit = true;
+        options.Password.RequireNonAlphanumeric = false;
+        options.Password.RequireLowercase = false;
+        options.Password.RequireUppercase = false;
+        options.Password.RequiredLength = 3;
     })
     .AddRoles<IdentityRole<Guid>>()
     .AddEntityFrameworkStores<CinemaDbContext>();
@@ -62,7 +68,8 @@ using (var scope = app.Services.CreateScope())
     ILogger<DataProcessor> logger = services.GetRequiredService<ILogger<DataProcessor>>();
     
     DataProcessor dataProcessor = new DataProcessor(entityValidator, logger);
-    await dataProcessor.ImportCinemasMoviesFromJson(dbContext);
+    dataProcessor.SeedRoles(services);
+    dataProcessor.SeedUsers(services);
 
     //await DataProcessor.ImportMoviesFromJson(dbContext);
     //await DataProcessor.ImportCinemasMoviesFromJson(dbContext);

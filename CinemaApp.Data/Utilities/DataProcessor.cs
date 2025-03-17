@@ -5,7 +5,9 @@ using CinemaApp.Data.Models;
 using CinemaApp.Data.Utilities.Interfaces;
 using static CinemaApp.Common.OutputMessages.ErrorMessages;
 
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using JsonSerializer = System.Text.Json.JsonSerializer;
@@ -144,5 +146,80 @@ namespace CinemaApp.Data.Utilities
         {
             throw new NotImplementedException();
         }
+
+        public void SeedUsers(IServiceProvider serviceProvider)
+        {
+            UserManager<ApplicationUser> userManager = serviceProvider
+                .GetRequiredService<UserManager<ApplicationUser>>();
+
+            this.SeedUser(userManager, "admin@example.com", "Admin@123", "Admin");
+            this.SeedUser(userManager, "appManager@example.com", "123asd", "Manager");
+            this.SeedUser(userManager, "appUser@example.com", "123asd", "User");
+        }
+
+        public void SeedRoles(IServiceProvider serviceProvider)
+        {
+            RoleManager<IdentityRole<Guid>> roleManager = serviceProvider
+                .GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+
+            string[] roles = { "Admin", "Manager", "User" };
+
+            foreach (string role in roles)
+            {
+                bool roleExists = roleManager
+                    .RoleExistsAsync(role)
+                    .GetAwaiter()
+                    .GetResult();
+                if (!roleExists)
+                {
+                    IdentityResult result = roleManager
+                        .CreateAsync(new IdentityRole<Guid>(role))
+                        .GetAwaiter()
+                        .GetResult();
+                    if (!result.Succeeded)
+                    {
+                        throw new Exception($"Failed to create role: {role}");
+                    }
+                }
+            }
+        }
+
+        private void SeedUser(UserManager<ApplicationUser> userManager, string email, string password, string role)
+        {
+            ApplicationUser? user = userManager.FindByEmailAsync(email).GetAwaiter().GetResult();
+            if (user == null)
+            {
+                user = new ApplicationUser
+                {
+                    UserName = email,
+                    Email = email
+                };
+                IdentityResult createUserResult = userManager
+                    .CreateAsync(user, password)
+                    .GetAwaiter()
+                    .GetResult();
+                if (!createUserResult.Succeeded)
+                {
+                    throw new Exception($"Failed to create user: {email}");
+                }
+            }
+
+            bool isInRole = userManager
+                .IsInRoleAsync(user, role)
+                .GetAwaiter()
+                .GetResult();
+            if (!isInRole)
+            {
+                IdentityResult addRoleResult = userManager
+                    .AddToRoleAsync(user, role)
+                    .GetAwaiter()
+                    .GetResult();
+                if (!addRoleResult.Succeeded)
+                {
+                    throw new Exception($"Failed to assign {role} role to user: {email}");
+                }
+            }
+        }
+
     }
 }
