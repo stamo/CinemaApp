@@ -9,5 +9,8 @@
 
         public const string EntityInstanceAlreadyExist =
             "One or more of the imported entities were skipped due to existing record with the same data!";
+
+        public const string EntityDataParseError =
+            "Some of the entity data could not be parsed correctly! Please check your input file and formatting!";
     }
 }

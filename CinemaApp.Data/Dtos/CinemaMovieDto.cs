@@ -4,7 +4,7 @@ using CinemaApp.Common.Constants;
 
 namespace CinemaApp.Data.Dtos
 {
-    internal class CinemaMovieDto
+    public class CinemaMovieDto
     {
         [Required]
         [MinLength(EntityConstants.Movie.TitleMinLength)]
